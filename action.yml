@@ -1,0 +1,45 @@
+name: Okokumo Heartbeat Ping
+description: Ping an okokumo heartbeat/cron check from a workflow (success, fail or start). A thin curl wrapper around your ping URL.
+author: okokumo
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  ping-url:
+    description: >
+      The check's ping URL, e.g. https://app.okokumo.com/ping/<token>. Store it
+      as a repository secret: anyone with the URL can send pings for the check.
+    required: true
+  status:
+    description: >
+      Which signal to send: success (the bare URL), fail (/fail) or start
+      (/start). The values of job.status (failure, cancelled) are accepted
+      too and send /fail, so the job.status expression can be passed as is.
+    required: false
+    default: success
+  fail-on-error:
+    description: >
+      Fail this step when the ping cannot be delivered. Default false: an
+      unreachable endpoint logs a warning and leaves the job result unchanged.
+    required: false
+    default: "false"
+
+outputs:
+  sent:
+    description: "'true' if the endpoint accepted the ping, otherwise 'false'."
+    value: ${{ steps.ping.outputs.sent }}
+  http-code:
+    description: The HTTP status of the last attempt (000 when no response arrived, empty when no request was made). Only 2xx counts as sent.
+    value: ${{ steps.ping.outputs.http-code }}
+
+runs:
+  using: composite
+  steps:
+    - id: ping
+      shell: bash
+      env:
+        INPUT_PING_URL: ${{ inputs.ping-url }}
+        INPUT_STATUS: ${{ inputs.status }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+      run: bash "$GITHUB_ACTION_PATH/ping.sh"
